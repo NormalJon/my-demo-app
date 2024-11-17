@@ -1,0 +1,153 @@
+<!-- templates/pricing_update.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Pricing Discrepancies</h2>
+
+<!-- Notification Section -->
+<div id="notification" class="alert" role="alert" style="display:none;"></div>
+
+<!-- Bulk Actions -->
+<div class="mb-3">
+    <button type="button" id="approve-selected" class="btn btn-success">Approve Selected</button>
+    <button type="button" id="dismiss-selected" class="btn btn-secondary">Dismiss Selected</button>
+</div>
+
+<!-- Discrepancies Table -->
+<form id="discrepancies-form">
+    <div class="table-responsive">
+        <table id="discrepancies-table" class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>Item Code</th>
+                    <th>Description</th>
+                    <th>Invoice Price</th>
+                    <th>Pricebook Price</th>
+                    <th>Difference</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in discrepancies %}
+                <tr id="item-{{ item.id }}">
+                    <td><input type="checkbox" class="item-checkbox" value="{{ item.id }}"></td>
+                    <td>{{ item.part_number }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>${{ '%.2f' % item.invoice_price }}</td>
+                    <td>${{ '%.2f' % item.pricebook_price }}</td>
+                    <td>
+                        {% if item.price_difference >= 0 %}
+                        <span class="text-success">+${{ '%.2f' % item.price_difference }}</span>
+                        {% else %}
+                        <span class="text-danger">${{ '%.2f' % item.price_difference }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-success approve-btn"
+                            data-id="{{ item.id }}">Approve</button>
+                        <button type="button" class="btn btn-sm btn-secondary dismiss-btn"
+                            data-id="{{ item.id }}">Dismiss</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Select/Deselect All Checkboxes
+        document.getElementById('select-all').addEventListener('change', function () {
+            let checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach((checkbox) => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        // Approve Selected
+        document.getElementById('approve-selected').addEventListener('click', function () {
+            let selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) {
+                showNotification('warning', 'No items selected.');
+                return;
+            }
+            updateDiscrepancies('approve', selectedIds);
+        });
+
+        // Dismiss Selected
+        document.getElementById('dismiss-selected').addEventListener('click', function () {
+            let selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) {
+                showNotification('warning', 'No items selected.');
+                return;
+            }
+            updateDiscrepancies('dismiss', selectedIds);
+        });
+
+        // Approve Individual
+        document.querySelectorAll('.approve-btn').forEach((button) => {
+            button.addEventListener('click', function () {
+                let itemId = this.getAttribute('data-id');
+                updateDiscrepancies('approve', [itemId]);
+            });
+        });
+
+        // Dismiss Individual
+        document.querySelectorAll('.dismiss-btn').forEach((button) => {
+            button.addEventListener('click', function () {
+                let itemId = this.getAttribute('data-id');
+                updateDiscrepancies('dismiss', [itemId]);
+            });
+        });
+
+        // Functions
+        function getSelectedIds() {
+            let checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            return Array.from(checkboxes).map((checkbox) => checkbox.value);
+        }
+
+        function updateDiscrepancies(action, itemIds) {
+            fetch(`/pricing_update/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ item_ids: itemIds })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showNotification('success', data.message);
+                        // Remove updated items from the table
+                        itemIds.forEach((id) => {
+                            let row = document.getElementById(`item-${id}`);
+                            row.parentNode.removeChild(row);
+                        });
+                    } else {
+                        showNotification('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('danger', 'An error occurred while processing the request.');
+                });
+        }
+
+        function showNotification(type, message) {
+            let notification = document.getElementById('notification');
+            notification.className = `alert alert-${type}`;
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %}

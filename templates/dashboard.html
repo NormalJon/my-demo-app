@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Notification Section -->
+{% if not_found_items %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <strong>Heads Up!</strong> We found some items that are not in your price list:
+    <ul>
+        {% for item in not_found_items %}
+        <li>
+            <strong>Part:</strong> {{ item.part_number }} - {{ item.description }}<br>
+            <strong>Invoice:</strong> {{ item.invoice_number }}, <strong>Vendor:</strong> {{ item.vendor }}
+        </li>
+        {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="mt-2">
+        <button class="btn btn-sm btn-primary">Add to Price List</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Statistics Section -->
+<section class="my-4">
+    <div class="row text-center">
+        <!-- Invoices Scanned -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Invoices Scanned</h5>
+                    <p class="display-6">{{ invoices_scanned }}</p>
+                    <canvas id="invoicesChart" aria-label="Invoices Scanned Chart" role="img"
+                        data-completed="{{ invoices_completed }}" data-pending="{{ invoices_pending }}"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Items Added -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Items Added</h5>
+                    <p class="display-6">{{ items_added }}</p>
+                    <canvas id="itemsChart" aria-label="Items Added Chart" role="img" data-new="{{ new_items }}"
+                        data-existing="{{ existing_items }}"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Pricing Corrections -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Pricing Corrections</h5>
+                    <p class="display-6">{{ pricing_corrections }}</p>
+                    <canvas id="correctionsChart" aria-label="Pricing Corrections Chart" role="img"
+                        data-corrected="{{ corrected_prices }}" data-pending="{{ pending_corrections }}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Manual Review Area -->
+<section class="my-4">
+    <h2>Invoices Needing Your Attention</h2>
+    <p>Review and manage invoices that require manual checks.</p>
+    <table id="manual-review-table" class="table table-striped">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select-all-review"></th>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in manual_review_invoices %}
+            <tr id="invoice-{{ invoice.id }}">
+                <td><input type="checkbox" class="review-checkbox" value="{{ invoice.id }}"></td>
+                <td>{{ invoice.number }}</td>
+                <td>{{ invoice.date }}</td>
+                <td>{{ invoice.vendor }}</td>
+                <td>${{ invoice.total_amount }}</td>
+                <td>{{ invoice.status }}</td>
+                <td>
+                    <button class="btn btn-success btn-sm">Review</button>
+                    <button class="btn btn-secondary btn-sm">Ignore</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <!-- Bulk Action Buttons -->
+    <div class="mt-3">
+        <button id="approve-selected-review" class="btn btn-primary btn-sm">Approve Selected</button>
+        <button id="deny-selected-review" class="btn btn-danger btn-sm">Deny Selected</button>
+    </div>
+</section>
+{% endblock %}
