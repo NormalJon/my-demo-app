@@ -27,7 +27,7 @@ class LineItem(db.Model):
     exclude_pricebook_wizard = db.Column(db.Boolean, default=False)
 
     # New fields
-    pricebook_price = db.Column(db.Float)
+    pricebook_price = db.Column(db.Float, default=0.0)
     discrepancy_resolved = db.Column(db.Boolean, default=False)
     discrepancy_action = db.Column(db.String(20))  # 'approved' or 'dismissed'
 
@@ -40,11 +40,11 @@ class PricebookItem(db.Model):
     code = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255))
-    invoice_price = db.Column(db.Float, nullable=False)
-    member_price = db.Column(db.Float)
-    add_on_price = db.Column(db.Float)
-    member_add_on_price = db.Column(db.Float)
-    hours = db.Column(db.Integer)
+    invoice_price = db.Column(db.Float, default=0.0)
+    member_price = db.Column(db.Float, default=0.0)
+    add_on_price = db.Column(db.Float,default=0.0)
+    member_add_on_price = db.Column(db.Float, default=0.0)
+    hours = db.Column(db.Integer, default=0.0)
     vendor = db.Column(db.String(100))
     taxable = db.Column(db.Boolean, default=False)
     deduct_as_job_cost = db.Column(db.Boolean, default=False)
@@ -52,6 +52,8 @@ class PricebookItem(db.Model):
     auto_replenish = db.Column(db.Boolean, default=False)
     exclude_from_wizard = db.Column(db.Boolean, default=False)
     is_new = db.Column(db.Boolean, default=False)  # Added field
+    # Ensure that pricebook price is supposed to be populated both here and in LineItem? I wonder if line item should be for invoices and pricebook should be for ST PB 
+    pricebook_price = db.Column(db.Float, default=0.0)
 
     def __repr__(self):
         return f'<PricebookItem {self.code} - {self.name}>'

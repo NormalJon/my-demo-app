@@ -21,7 +21,7 @@
             <tr>
                 <td>{{ item.code }}</td>
                 <td>{{ item.name }}</td>
-                <td>${{ '%.2f' | format(item.price) }}</td>
+                <td>${{ '%.2f' | format(item.pricebook_price) }}</td>
                 <td>{{ item.vendor }}</td>
                 <td>
                     <button class="btn btn-info btn-sm" data-bs-toggle="modal"
@@ -46,10 +46,10 @@
             <div class="modal-body">
                 <p><strong>Code:</strong> {{ item.code }}</p>
                 <p><strong>Description:</strong> {{ item.description }}</p>
-                <p><strong>Price:</strong> ${{ '%.2f' | format(item.price) }}</p>
-                <p><strong>Member Price:</strong> ${{ '%.2f' | format(item.member_price) }}</p>
-                <p><strong>Add On Price:</strong> ${{ '%.2f' | format(item.add_on_price) }}</p>
-                <p><strong>Member Add On Price:</strong> ${{ '%.2f' | format(item.member_add_on_price) }}</p>
+                <p><strong>Price:</strong> ${{ '%.2f' | format(item.pricebook_price) }}</p>
+                <p><strong>Member Price:</strong> ${{ '%.2f' | format(item.pricebook_price) }}</p>
+                <p><strong>Add On Price:</strong> ${{ '%.2f' | format(item.pricebook_price) }}</p>
+                <p><strong>Member Add On Price:</strong> ${{ '%.2f' | format(item.pricebook_price) }}</p>
                 <p><strong>Hours:</strong> {{ item.hours }}</p>
                 <p><strong>Vendor:</strong> {{ item.vendor }}</p>
                 <p><strong>Taxable:</strong> {{ 'Yes' if item.taxable else 'No' }}</p>

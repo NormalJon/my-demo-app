@@ -1,25 +1,174 @@
 // static/js/scripts.js
 (function ($) {
     $(document).ready(function () {
+
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(
+            document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        );
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Pricing Discrepancies Page Scripts
+        if ($('#discrepancies-table').length) {
+            // Initialize DataTables for Discrepancies Table
+            $('#discrepancies-table').DataTable({
+                paging: true,
+                searching: true,
+                ordering: true,
+                info: true,
+                responsive: true,
+                pageLength: 10,
+                lengthChange: false
+            });
+
+            // Set up event handlers for discrepancies
+            setupDiscrepanciesEventHandlers();
+        }
+
+        function setupDiscrepanciesEventHandlers() {
+            // Approve individual discrepancy
+            $(document).on('click', '.approve-btn', function () {
+                let itemId = $(this).data('id');
+                updateDiscrepancy('approve', [itemId]);
+            });
+
+            // Dismiss individual discrepancy
+            $(document).on('click', '.dismiss-btn', function () {
+                let itemId = $(this).data('id');
+                updateDiscrepancy('dismiss', [itemId]);
+            });
+
+            // Approve selected discrepancies
+            $('#approve-selected').click(function () {
+                let selectedIds = getSelectedDiscrepancyIds();
+                if (selectedIds.length === 0) {
+                    showNotification('warning', 'No items selected.');
+                    return;
+                }
+                showConfirmationModal('Are you sure you want to approve the selected discrepancies?', function () {
+                    updateDiscrepancy('approve', selectedIds);
+                });
+            });
+
+            // Dismiss selected discrepancies
+            $('#dismiss-selected').click(function () {
+                let selectedIds = getSelectedDiscrepancyIds();
+                if (selectedIds.length === 0) {
+                    showNotification('warning', 'No items selected.');
+                    return;
+                }
+                showConfirmationModal('Are you sure you want to dismiss the selected discrepancies?', function () {
+                    updateDiscrepancy('dismiss', selectedIds);
+                });
+            });
+
+            // Select/Deselect all checkboxes
+            $('#select-all').change(function () {
+                $('.item-checkbox').prop('checked', $(this).prop('checked'));
+            });
+
+            // Handle individual checkbox change to update "Select All" checkbox
+            $(document).on('change', '.item-checkbox', function () {
+                if ($('.item-checkbox:checked').length === $('.item-checkbox').length) {
+                    $('#select-all').prop('checked', true);
+                } else {
+                    $('#select-all').prop('checked', false);
+                }
+            });
+        }
+
+        // Function to get selected discrepancy IDs
+        function getSelectedDiscrepancyIds() {
+            let selected = [];
+            $('.item-checkbox:checked').each(function () {
+                selected.push($(this).val());
+            });
+            return selected;
+        }
+
+        // Function to update discrepancies (approve or dismiss)
+        function updateDiscrepancy(action, itemIds) {
+            $.ajax({
+                url: '/pricing_update/' + action,
+                type: 'POST',
+                data: JSON.stringify({ item_ids: itemIds }),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.status === 'success') {
+                        showNotification('success', response.message);
+                        // Remove updated items from the table
+                        itemIds.forEach(function (id) {
+                            let row = $('#item-' + id);
+                            $('#discrepancies-table').DataTable().row(row).remove().draw();
+                        });
+                    } else {
+                        showNotification('danger', response.message);
+                    }
+                },
+                error: function (xhr) {
+                    console.error('Error:', xhr.responseText);
+                    showNotification('danger', 'An error occurred while processing the request.');
+                }
+            });
+        }
+
+        // Function to show notifications using Bootstrap Toasts
+        function showNotification(type, message) {
+            let toastEl = document.getElementById('notificationToast');
+            document.getElementById('toast-title').textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById('toast-body').textContent = message;
+
+            // Adjust toast classes based on notification type
+            toastEl.className = `toast text-bg-${type}`;
+            var toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+        // Function to show confirmation modal
+        function showConfirmationModal(message, confirmCallback) {
+            document.getElementById('confirmationModalBody').textContent = message;
+            var confirmBtn = document.getElementById('confirmActionBtn');
+
+            // Remove previous event listeners
+            var newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+            newConfirmBtn.addEventListener('click', function () {
+                confirmCallback();
+                var modalEl = document.getElementById('confirmationModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+            });
+
+            var modalEl = document.getElementById('confirmationModal');
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
         // Line Items Page Scripts
         if ($('#line-items-table').length) {
+            // Initialize DataTables for Line Items Table
+            $('#line-items-table').DataTable({
+                paging: true,
+                searching: true,
+                ordering: true,
+                info: true,
+                pageLength: 10,
+                lengthChange: false
+            });
+
             // Approve individual item with modal
             $('.approve-btn').click(function () {
-                const modal = new bootstrap.Modal(document.getElementById('approveModal')); // Bootstrap modal instance
-                const form = $('#approve-form'); // Form inside modal
+                const modal = new bootstrap.Modal(document.getElementById('approveModal'));
+                const form = $('#approve-form');
 
                 // Populate modal fields with item data
                 form.find('#code').val($(this).data('part'));
-                form.find('#name').val(''); // Optional: populate with default value if needed
                 form.find('#description').val($(this).data('description'));
                 form.find('#price').val($(this).data('price'));
-                form.find('#member_price').val('');
-                form.find('#add_on_price').val('');
-                form.find('#member_add_on_price').val('');
-                form.find('#hours').val('0.00000');
-                form.find('#taxable').prop('checked', false);
-                form.find('#membership_discount').prop('checked', false);
-                form.find('#auto_replenish').prop('checked', false);
+                // Populate other fields as needed
 
                 // Show the modal
                 modal.show();
@@ -27,7 +176,7 @@
                 // Handle the confirm button click
                 $('#confirm-approval').off('click').on('click', function () {
                     const formData = new FormData(form[0]);
-                    const itemId = form.find('#code').val(); // Use item ID
+                    const itemId = form.find('#code').val();
 
                     // Use the new route for popup approval
                     fetch(`/line_items/approve/${itemId}`, {
@@ -37,98 +186,106 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.status === 'success') {
-                                alert(data.message);
+                                showNotification('success', data.message);
                                 modal.hide();
-                                location.reload(); // Reload the page to reflect changes
+                                location.reload();
                             } else {
-                                alert('Error approving item: ' + data.message);
+                                showNotification('danger', 'Error approving item: ' + data.message);
                             }
                         })
                         .catch(error => {
                             console.error('Error:', error);
-                            alert('An error occurred while processing the request.');
+                            showNotification('danger', 'An error occurred while processing the request.');
                         });
                 });
             });
 
-            // Other existing functions (bulk action, deny, etc.)
+            // Deny individual item
+            $('.deny-btn').click(function () {
+                let itemId = $(this).data('id');
+                approveDenyLineItem(itemId, 'deny');
+            });
+
+            // Approve selected items
+            $('#approve-selected').click(function () {
+                bulkActionLineItems('approve');
+            });
+
+            // Deny selected items
+            $('#deny-selected').click(function () {
+                bulkActionLineItems('deny');
+            });
+
+            // Select/Deselect all checkboxes
+            $('#select-all').change(function () {
+                $('.item-checkbox').prop('checked', $(this).prop('checked'));
+            });
         }
 
-        // Deny individual item
-        $('.deny-btn').click(function () {
-            let itemId = $(this).data('id');
-            approveDenyItem(itemId, 'deny');
-        });
+        // Function to approve or deny a line item
+        function approveDenyLineItem(itemId, action) {
+            let url = '';
+            if (action === 'approve') {
+                url = `/approve/${itemId}`;
+            } else if (action === 'deny') {
+                url = `/deny/${itemId}`;
+            }
 
-        // Approve selected items
-        $('#approve-selected').click(function () {
-            bulkAction('approve');
-        });
+            $.ajax({
+                url: url,
+                type: 'POST',
+                success: function (response) {
+                    if (response.status === 'success') {
+                        showNotification('success', response.message);
+                        // Update the row's status and disable buttons
+                        let row = $(`#invoice-${itemId}`);
+                        row.find('.btn-success, .btn-secondary').remove();
+                        if (action === 'approve') {
+                            row.addClass('table-success');
+                        } else {
+                            row.addClass('table-danger');
+                        }
+                    } else {
+                        showNotification('danger', response.message);
+                    }
+                },
+                error: function (xhr) {
+                    showNotification('danger', 'An error occurred while processing the request.');
+                }
+            });
+        }
 
-        // Deny selected items
-        $('#deny-selected').click(function () {
-            bulkAction('deny');
-        });
+        // Function to perform bulk actions on line items
+        function bulkActionLineItems(action) {
+            let selected = [];
+            $('.item-checkbox:checked').each(function () {
+                selected.push($(this).val());
+            });
 
-        // Select/Deselect all checkboxes
-        $('#select-all').change(function () {
-            $('.item-checkbox').prop('checked', $(this).prop('checked'));
-        });
+            if (selected.length === 0) {
+                showNotification('warning', 'No items selected.');
+                return;
+            }
 
-        // Refresh the list
-        $('#refresh-list').click(function () {
-            location.reload();
-        });
-
-        // Submit all approvals
-        $('#submit-approvals').click(function () {
-            if (confirm('Are you sure you want to submit all approved items to the CRM?')) {
+            showConfirmationModal(`Are you sure you want to ${action} the selected items?`, function () {
                 $.ajax({
-                    url: '/submit_approvals',
+                    url: '/bulk_action',
                     type: 'POST',
+                    data: JSON.stringify({ action: action, item_ids: selected }),
+                    contentType: 'application/json',
                     success: function (response) {
                         if (response.status === 'success') {
-                            alert(response.message);
+                            showNotification('success', response.message);
                             location.reload();
+                        } else {
+                            showNotification('danger', response.message);
                         }
                     },
                     error: function (xhr) {
-                        alert('An error occurred while submitting approvals.');
+                        showNotification('danger', 'An error occurred while processing the bulk action.');
                     }
                 });
-            }
-        });
-
-        // Cancel approvals
-        $('#cancel-approvals').click(function () {
-            if (confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
-                location.reload();
-            }
-        });
-
-        // Initialize DataTables for Line Items Table
-        $('#line-items-table').DataTable({
-            paging: true,
-            searching: true,
-            ordering: true,
-            info: true,
-            pageLength: 10,
-            lengthChange: false
-        });
-
-        // Pricebook Items Page Scripts
-        if ($('#pricebook-items-table').length) {
-            // Initialize DataTables for Pricebook Items Table
-            $('#pricebook-items-table').DataTable({
-                paging: true,
-                searching: true,
-                ordering: true,
-                info: true,
-                pageLength: 10,
-                lengthChange: false
             });
-
-            // Add any event handlers specific to Pricebook Items here
         }
 
         // Manual Review Page Scripts
@@ -159,94 +316,6 @@
             });
         }
 
-        // Initialize Bootstrap tooltips
-        var tooltipTriggerList = [].slice.call(
-            document.querySelectorAll('[data-bs-toggle="tooltip"]')
-        );
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        // Function to approve or deny an item
-        function approveDenyItem(itemId, action) {
-            let url = '';
-            if (action === 'approve') {
-                url = `/approve/${itemId}`;
-            } else if (action === 'deny') {
-                url = `/deny/${itemId}`;
-            }
-
-            $.ajax({
-                url: url,
-                type: 'POST',
-                success: function (response) {
-                    if (response.status === 'success') {
-                        // Update the row's status and disable buttons
-                        let row = $(`#invoice-${itemId}`);
-                        if (action === 'approve') {
-                            row
-                                .find('td:nth-child(6)')
-                                .text('Approved')
-                                .removeClass('text-warning')
-                                .addClass('text-success');
-                            row.find('.btn-success, .btn-secondary').remove();
-                            row.addClass('table-success');
-                        } else {
-                            row
-                                .find('td:nth-child(6)')
-                                .text('Denied')
-                                .removeClass('text-warning')
-                                .addClass('text-danger');
-                            row.find('.btn-success, .btn-secondary').remove();
-                            row.addClass('table-danger');
-                        }
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function (xhr) {
-                    alert('An error occurred while processing the request.');
-                }
-            });
-        }
-
-        // Function to perform bulk actions
-        function bulkAction(action) {
-            let selected = [];
-            $('.item-checkbox:checked').each(function () {
-                selected.push($(this).val());
-            });
-
-            if (selected.length === 0) {
-                alert('No items selected.');
-                return;
-            }
-
-            if (!confirm(`Are you sure you want to ${action} the selected items?`)) {
-                return;
-            }
-
-            $.ajax({
-                url: '/bulk_action',
-                type: 'POST',
-                data: {
-                    action: action,
-                    item_ids: selected
-                },
-                success: function (response) {
-                    if (response.status === 'success') {
-                        // Reload the page to reflect changes
-                        location.reload();
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function (xhr) {
-                    alert('An error occurred while processing the bulk action.');
-                }
-            });
-        }
-
         // Function to perform bulk actions in Manual Review
         function bulkActionReview(action) {
             let selected = [];
@@ -255,42 +324,39 @@
             });
 
             if (selected.length === 0) {
-                alert('No items selected.');
+                showNotification('warning', 'No items selected.');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to ${action} the selected items?`)) {
-                return;
-            }
-
-            $.ajax({
-                url: '/bulk_action',
-                type: 'POST',
-                data: {
-                    action: action,
-                    item_ids: selected
-                },
-                success: function (response) {
-                    if (response.status === 'success') {
-                        // Reload the page to reflect changes
-                        location.reload();
-                    } else {
-                        alert(response.message);
+            showConfirmationModal(`Are you sure you want to ${action} the selected items?`, function () {
+                $.ajax({
+                    url: '/bulk_action',
+                    type: 'POST',
+                    data: JSON.stringify({ action: action, item_ids: selected }),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            showNotification('success', response.message);
+                            location.reload();
+                        } else {
+                            showNotification('danger', response.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        showNotification('danger', 'An error occurred while processing the bulk action.');
                     }
-                },
-                error: function (xhr) {
-                    alert('An error occurred while processing the bulk action.');
-                }
+                });
             });
         }
+
+        // Initialize Charts if needed (assuming you have charts on some pages)
+        initializeCharts();
 
         // Chart.js Initialization
         function initializeCharts() {
             // Invoices Scanned Chart
             if ($('#invoicesChart').length) {
-                var ctxInvoices = document
-                    .getElementById('invoicesChart')
-                    .getContext('2d');
+                var ctxInvoices = document.getElementById('invoicesChart').getContext('2d');
                 new Chart(ctxInvoices, {
                     type: 'doughnut',
                     data: {
@@ -314,64 +380,7 @@
                 });
             }
 
-            // Items Added Chart
-            if ($('#itemsChart').length) {
-                var ctxItems = document
-                    .getElementById('itemsChart')
-                    .getContext('2d');
-                new Chart(ctxItems, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['New Items', 'Existing Items'],
-                        datasets: [
-                            {
-                                data: [
-                                    $('#itemsChart').data('new'),
-                                    $('#itemsChart').data('existing')
-                                ],
-                                backgroundColor: ['#2196F3', '#FFC107']
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
-
-            // Pricing Corrections Chart
-            if ($('#correctionsChart').length) {
-                var ctxCorrections = document
-                    .getElementById('correctionsChart')
-                    .getContext('2d');
-                new Chart(ctxCorrections, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Corrected', 'Pending'],
-                        datasets: [
-                            {
-                                data: [
-                                    $('#correctionsChart').data('corrected'),
-                                    $('#correctionsChart').data('pending')
-                                ],
-                                backgroundColor: ['#9C27B0', '#E91E63']
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
+            // Other charts can be initialized similarly
         }
-
-        // Initialize Charts
-        initializeCharts();
     });
 })(jQuery);

@@ -6,13 +6,16 @@
     <meta charset="UTF-8">
     <title>Invoice Scanner UI</title>
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.0/dist/superhero/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Custom Styles -->
     <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+
 </head>
 
 <body>
@@ -26,37 +29,54 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <!-- Existing nav items -->
+                    <!-- Dashboard -->
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+                            href="{{ url_for('dashboard') }}">Dashboard</a>
                     </li>
+
+                    <!-- Line Items Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['line_items', 'manual_review', 'pricing_update'] %}active{% endif %}"
+                            href="#" id="lineItemsDropdown" role="button" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            Line Items
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="lineItemsDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('line_items') }}">Approval</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('manual_review') }}">Manual Review</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('pricing_update') }}">Pricing Update</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Pricebook Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['pricebook_builder', 'pricebook_items'] %}active{% endif %}"
+                            href="#" id="pricebookDropdown" role="button" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            Pricebook
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="pricebookDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('pricebook_builder') }}">Builder</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('pricebook_items') }}">Items</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Settings -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('line_items') }}">Line Item Approval</a>
+                        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}"
+                            href="{{ url_for('settings') }}">Settings</a>
                     </li>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('settings') }}">Settings</a>
-                    </li>
+
+                    <!-- Logout -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                    </li>
-                    <!-- New nav items -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('manual_review') }}">Manual Review</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pricing_update') }}">Pricing Update</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pricebook_builder') }}">Pricebook Builder</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pricebook_items') }}">Pricebook Items</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
+
 
     <!-- Main Container -->
     <div class="container my-4">
@@ -73,6 +93,41 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <!-- Your Custom Scripts -->
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+    <!-- Toast Container -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-body">
+                <!-- Notification message -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationModalBody">
+                    <!-- Confirmation message will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

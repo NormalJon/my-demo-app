@@ -9,52 +9,56 @@
 
 <!-- Bulk Actions -->
 <div class="mb-3">
-    <button type="button" id="approve-selected" class="btn btn-success">Approve Selected</button>
-    <button type="button" id="dismiss-selected" class="btn btn-secondary">Dismiss Selected</button>
+    <button type="button" id="approve-selected" class="btn btn-success">
+        <i class="bi bi-check-circle"></i> Approve Selected
+    </button>
+    <button type="button" id="dismiss-selected" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Dismiss Selected
+    </button>
 </div>
 
 <!-- Discrepancies Table -->
-<form id="discrepancies-form">
-    <div class="table-responsive">
-        <table id="discrepancies-table" class="table table-bordered table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th><input type="checkbox" id="select-all"></th>
-                    <th>Item Code</th>
-                    <th>Description</th>
-                    <th>Invoice Price</th>
-                    <th>Pricebook Price</th>
-                    <th>Difference</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in discrepancies %}
-                <tr id="item-{{ item.id }}">
-                    <td><input type="checkbox" class="item-checkbox" value="{{ item.id }}"></td>
-                    <td>{{ item.part_number }}</td>
-                    <td>{{ item.description }}</td>
-                    <td>${{ '%.2f' % item.invoice_price }}</td>
-                    <td>${{ '%.2f' % item.pricebook_price }}</td>
-                    <td>
-                        {% if item.price_difference >= 0 %}
-                        <span class="text-success">+${{ '%.2f' % item.price_difference }}</span>
-                        {% else %}
-                        <span class="text-danger">${{ '%.2f' % item.price_difference }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-success approve-btn"
-                            data-id="{{ item.id }}">Approve</button>
-                        <button type="button" class="btn btn-sm btn-secondary dismiss-btn"
-                            data-id="{{ item.id }}">Dismiss</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</form>
+<div class="table-responsive">
+    <table id="discrepancies-table" class="table table-bordered table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th><input type="checkbox" id="select-all"></th>
+                <th>Item Code</th>
+                <th>Description</th>
+                <th>Invoice Price</th>
+                <th>Pricebook Price</th>
+                <th>Difference</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in discrepancies %}
+            <tr id="item-{{ item.id }}">
+                <td><input type="checkbox" class="item-checkbox" value="{{ item.id }}"></td>
+                <td>{{ item.part_number }}</td>
+                <td>{{ item.description }}</td>
+                <td>${{ '%.2f' % item.invoice_price }}</td>
+                <td>${{ '%.2f' % item.pricebook_price }}</td>
+                <td>
+                    {% if item.price_difference >= 0 %}
+                    <span class="text-success">+${{ '%.2f' % item.price_difference }}</span>
+                    {% else %}
+                    <span class="text-danger">${{ '%.2f' % item.price_difference }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-success approve-btn" data-id="{{ item.id }}">
+                        <i class="bi bi-check-circle"></i> Approve
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary dismiss-btn" data-id="{{ item.id }}">
+                        <i class="bi bi-x-circle"></i> Dismiss
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}
 
