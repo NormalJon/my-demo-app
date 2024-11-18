@@ -1,0 +1,318 @@
+<!-- templates/line_items.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 style="font-size: 2.5em; font-weight: bold; color: #003366;">Price Book Builder</h1>
+
+<!-- Adjust notification styles to softer yellow color -->
+{% if not_found_items %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert"
+    style="background-color: #ffc107; color: #212529;">
+    <strong>Items Not Found in Pricebook:</strong>
+    <ul>
+        {% for item in not_found_items %}
+        <li>
+            Part Number: {{ item.part_number }}, Description: {{ item.description }},
+            Invoice: {{ item.invoice_number }}, Vendor: {{ item.vendor }}
+        </li>
+        {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<!-- Update header to match new naming conventions in summary section -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Total Items</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ total }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Approved</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ approved }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-header">Denied</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ denied }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3" style="background-color: #ffc107; color: #212529;">
+            <div class="card-header">Pending</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ pending }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Line Items Table -->
+<form id="bulk-action-form">
+    <div class="mb-3">
+        <button type="button" id="approve-selected" class="btn btn-success">Approve Selected</button>
+        <button type="button" id="deny-selected" class="btn btn-danger">Deny Selected</button>
+        <button type="button" id="refresh-list" class="btn btn-secondary">Refresh List</button>
+    </div>
+    <div class="table-responsive">
+        <table id="line-items-table" class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>#</th>
+                    <th>Invoice Number</th>
+                    <th>Vendor</th>
+                    <th>Part Number</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in line_items %}
+                <tr id="item-{{ item.id }}" class="
+                {% if item.status == 'Approved' %}table-success
+                {% elif item.status == 'Denied' %}table-danger
+                {% elif item.status == 'Pending' %}table-active
+                {% endif %}
+                ">
+                    <td><input type="checkbox" class="item-checkbox" value="{{ item.id }}"></td>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.invoice_number }}</td>
+                    <td>{{ item.vendor }}</td>
+                    <td>{{ item.part_number }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>${{ "%.2f" % (item.invoice_price | default(0.0) | float) }}</td>
+                    <td>{{ item.status }}</td>
+                    <td>
+                        {% if item.status == 'Pending' %}
+                        <button type="button" class="btn btn-sm btn-success approve-btn" data-id="{{ item.id }}"
+                            data-code="{{ item.code|default('')|e }}" data-name="{{ item.name|default('')|e }}"
+                            data-description="{{ item.description|default('')|e }}"
+                            data-price="{{ '%.2f' % (item.invoice_price or 0.0) }}"
+                            data-member-price="{{ '%.2f' % (item.member_price|default(item.invoice_price)|default(0.0)) }}"
+                            data-add-on-price="{{ '%.2f' % (item.add_on_price|default(item.invoice_price)|default(0.0)) }}"
+                            data-member-add-on-price="{{ '%.2f' % (item.member_add_on_price|default(item.invoice_price)|default(0.0)) }}"
+                            data-hours="{{ '%.2f' % (item.hours|default(0.0)) }}" data-taxable="{{ item.taxable }}"
+                            data-deduct-job-cost="{{ item.deduct_job_cost }}"
+                            data-allow-membership-discounts="{{ item.membership_discount }}"
+                            data-auto-replenish="{{ item.auto_replenish }}"
+                            data-exclude-pricebook-wizard="{{ item.exclude_pricebook_wizard }}" data-bs-toggle="modal"
+                            data-bs-target="#approveModal">Approve</button>
+
+
+
+                        <button type="button" class="btn btn-sm btn-danger deny-btn"
+                            data-id="{{ item.id }}">Deny</button>
+                        {% else %}
+                        ---
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<!-- Submit and Cancel Buttons -->
+<div class="mt-3">
+    <button type="button" id="submit-approvals" class="btn btn-primary">Submit All Approvals</button>
+    <button type="button" id="cancel-approvals" class="btn btn-secondary">Cancel</button>
+</div>
+
+</form>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="approve-form">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Item Configuration Form</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form content here -->
+                    <div class="mb-3">
+                        <label for="item-code" class="form-label">Code</label>
+                        <input type="text" class="form-control" id="item-code" name="code" maxlength="31">
+                        <div class="form-text">(0/31 Characters)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="item-name" name="name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="item-description" name="description"></textarea>
+                    </div>
+                    <h5>Price Information</h5>
+                    <div class="mb-3">
+                        <label for="item-price" class="form-label">Price</label>
+                        <input type="number" step="0.01" class="form-control" id="item-price" name="price">
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-member-price" class="form-label">Member Price</label>
+                        <input type="number" step="0.01" class="form-control" id="item-member-price"
+                            name="member_price">
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-add-on-price" class="form-label">Add On Price</label>
+                        <input type="number" step="0.01" class="form-control" id="item-add-on-price"
+                            name="add_on_price">
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-member-add-on-price" class="form-label">Member Add On Price</label>
+                        <input type="number" step="0.01" class="form-control" id="item-member-add-on-price"
+                            name="member_add_on_price">
+                    </div>
+                    <div class="mb-3">
+                        <label for="item-hours" class="form-label">Hours</label>
+                        <input type="number" step="0.00001" class="form-control" id="item-hours" name="hours">
+                    </div>
+                    <h5>Options</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="item-taxable" name="taxable">
+                        <label class="form-check-label" for="item-taxable">Taxable</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="item-deduct-job-cost"
+                            name="deduct_job_cost">
+                        <label class="form-check-label" for="item-deduct-job-cost">Deduct as job cost</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="item-allow-membership-discounts"
+                            name="allow_membership_discounts">
+                        <label class="form-check-label" for="item-allow-membership-discounts">Allow Membership
+                            Discounts</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="item-auto-replenish" name="auto_replenish">
+                        <label class="form-check-label" for="item-auto-replenish">Automatically replenish this item as
+                            it is used on invoices</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="item-exclude-pricebook-wizard"
+                            name="exclude_pricebook_wizard">
+                        <label class="form-check-label" for="item-exclude-pricebook-wizard">Exclude from Pricebook
+                            Wizard</label>
+                    </div>
+                    <!-- Include a hidden field to hold the item ID -->
+                    <input type="hidden" id="item-id" name="item_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Approve</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+<!-- Existing scripts if any -->
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var approveModal = document.getElementById('approveModal');
+        approveModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var itemId = button.getAttribute('data-id');
+
+            // Get data from data attributes
+            var code = button.getAttribute('data-code') || '';
+            var name = button.getAttribute('data-name') || '';
+            var description = button.getAttribute('data-description') || '';
+            var price = parseFloat(button.getAttribute('data-price')) || 0.00;
+
+            var memberPrice = parseFloat(button.getAttribute('data-member-price'));
+            if (isNaN(memberPrice)) {
+                memberPrice = price;
+            }
+
+            var addOnPrice = parseFloat(button.getAttribute('data-add-on-price'));
+            if (isNaN(addOnPrice)) {
+                addOnPrice = price;
+            }
+
+            var memberAddOnPrice = parseFloat(button.getAttribute('data-member-add-on-price'));
+            if (isNaN(memberAddOnPrice)) {
+                memberAddOnPrice = price;
+            }
+
+            var hours = parseFloat(button.getAttribute('data-hours')) || 0.00;
+
+            var taxable = button.getAttribute('data-taxable') === 'True';
+            var deductJobCost = button.getAttribute('data-deduct-job-cost') === 'True';
+            var allowMembershipDiscounts = button.getAttribute('data-allow-membership-discounts') === 'True';
+            var autoReplenish = button.getAttribute('data-auto-replenish') === 'True';
+            var excludePricebookWizard = button.getAttribute('data-exclude-pricebook-wizard') === 'True';
+
+            // Populate the form fields
+            document.getElementById('item-id').value = itemId;
+            document.getElementById('item-code').value = code;
+            document.getElementById('item-name').value = name;
+            document.getElementById('item-description').value = description;
+            document.getElementById('item-price').value = price.toFixed(2);
+            document.getElementById('item-member-price').value = memberPrice.toFixed(2);
+            document.getElementById('item-add-on-price').value = addOnPrice.toFixed(2);
+            document.getElementById('item-member-add-on-price').value = memberAddOnPrice.toFixed(2);
+            document.getElementById('item-hours').value = hours.toFixed(2);
+            document.getElementById('item-taxable').checked = taxable;
+            document.getElementById('item-deduct-job-cost').checked = deductJobCost;
+            document.getElementById('item-allow-membership-discounts').checked = allowMembershipDiscounts;
+            document.getElementById('item-auto-replenish').checked = autoReplenish;
+            document.getElementById('item-exclude-pricebook-wizard').checked = excludePricebookWizard;
+        });
+
+        // Handle form submission
+        document.getElementById('approve-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            var form = event.target;
+            var itemId = document.getElementById('item-id').value;
+            var formData = new FormData(form);
+
+            // Send AJAX POST request to approve the item
+            fetch('/line_items/approve/' + itemId, {
+                method: 'POST',
+                body: formData,
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (data.status === 'success') {
+                        // Close the modal
+                        var modal = bootstrap.Modal.getInstance(approveModal);
+                        modal.hide();
+                        // Update the table row to reflect the new status
+                        var row = document.getElementById('item-' + itemId);
+                        row.classList.remove('table-warning');
+                        row.classList.add('table-success');
+                        row.querySelector('td:nth-child(8)').textContent = 'Approved';
+                        row.querySelector('.approve-btn').remove();
+                        row.querySelector('.deny-btn').remove();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                });
+        });
+    });
+</script>
+{% endblock %}

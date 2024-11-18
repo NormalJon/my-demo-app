@@ -111,7 +111,7 @@ def manual_review():
 
 @app.route('/line_items')
 def line_items():
-    # Gather data for the template
+    # Gather data for the new page routing logic
     total = LineItem.query.count()
     approved = LineItem.query.filter_by(status='Approved').count()
     denied = LineItem.query.filter_by(status='Denied').count()
@@ -119,13 +119,15 @@ def line_items():
     not_found_items = LineItem.query.filter_by(found_in_pricebook=False).all()
     line_items = LineItem.query.all()
 
-    return render_template('line_items.html',
+    return render_template('pricebook_builder.html',
                            total=total,
                            approved=approved,
                            denied=denied,
                            pending=pending,
                            not_found_items=not_found_items,
                            line_items=line_items)
+
+
 @app.route('/settings')
 def settings():
     # Render a settings page
@@ -144,8 +146,13 @@ def invoices():
 @app.route('/pricebook_builder')
 def pricebook_builder():
     # Fetch necessary data for pricebook builder
-    # ...
-    return render_template('pricebook_builder.html')
+    line_items = LineItem.query.all()
+    not_found_items = LineItem.query.filter_by(found_in_pricebook=False).all()
+    total = len(line_items)
+    approved = len([item for item in line_items if item.status == 'Approved'])
+    denied = len([item for item in line_items if item.status == 'Denied'])
+    pending = len([item for item in line_items if item.status == 'Pending'])
+    return render_template('pricebook_builder.html', line_items=line_items, not_found_items=not_found_items, total=total, approved=approved, denied=denied, pending=pending)
 
 @app.route('/line_items/approve/<int:item_id>', methods=['POST'])
 def line_item_approve(item_id):

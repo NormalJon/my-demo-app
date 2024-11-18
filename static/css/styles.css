@@ -13,7 +13,8 @@ body {
 }
 
 .table-warning {
-    background-color: #fff3cd !important;
+    background-color: #FFF8DC !important;
+    /* A softer yellow color */
 }
 
 .btn {

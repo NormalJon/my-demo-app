@@ -2,11 +2,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Line Item Approval</h2>
+<h1>Price Book Builder</h1>
 
-<!-- Notification Section -->
+<!-- Adjust notification styles to softer yellow color -->
 {% if not_found_items %}
-<div class="alert alert-warning alert-dismissible fade show" role="alert">
+<div class="alert alert-warning alert-dismissible fade show" role="alert" style="background-color: #fff8e1;">
     <strong>Items Not Found in Pricebook:</strong>
     <ul>
         {% for item in not_found_items %}
@@ -20,11 +20,11 @@
 </div>
 {% endif %}
 
-<!-- Summary Section -->
+<!-- Update header to match new naming conventions in summary section -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-white bg-primary mb-3">
-            <div class="card-header">Total Line Items</div>
+            <div class="card-header">Total Items</div>
             <div class="card-body">
                 <h5 class="card-title">{{ total }}</h5>
             </div>
@@ -47,7 +47,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
+        <div class="card text-white bg-warning mb-3" style="background-color: #fff8e1;">
             <div class="card-header">Pending</div>
             <div class="card-body">
                 <h5 class="card-title">{{ pending }}</h5>
@@ -83,7 +83,7 @@
                 <tr id="item-{{ item.id }}" class="
                 {% if item.status == 'Approved' %}table-success
                 {% elif item.status == 'Denied' %}table-danger
-                {% elif item.status == 'Pending' %}table-warning
+                {% elif item.status == 'Pending' %}table-active
                 {% endif %}
                 ">
                     <td><input type="checkbox" class="item-checkbox" value="{{ item.id }}"></td>
