@@ -20,6 +20,7 @@ migrate.init_app(app, db)
 
 from models import LineItem  # Import after initializing db and migrate
 
+
 @app.route('/')
 def dashboard():
     # Gather statistics
