@@ -1,3 +1,4 @@
 # Exclude virtual environments
 .venv/
 venv/
+.vercel
